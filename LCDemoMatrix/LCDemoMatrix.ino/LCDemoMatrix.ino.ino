@@ -1,6 +1,7 @@
 #include <SPI.h>
 #include "LedMatrix.h"
 
+#define DELAY 60
 
 #define NUMBER_OF_DEVICES 1
 #define CS_PIN D4
@@ -99,25 +100,30 @@ int current_fraze = 0;
 int next_fraze = 1;
 
 void loop() {
-  delay(2000);
-  fill_from_left_angle(FRAZES[current_fraze], FRAZES[next_fraze]);
-  //next();
+  delay(10000);
+  next();
 }
 
 void render() {
+  if (false) {
+    doors(FRAZES[current_fraze], FRAZES[next_fraze]);
+    return;
+  }
   switch (current_fraze) {
-    case 1: fill_from_left_angle(FRAZES[current_fraze], FRAZES[next_fraze]);
+    case 1:
+    case 3:
+      fill_from_left_angle(FRAZES[current_fraze], FRAZES[next_fraze]);
       break;
     case 2:
-    case 3:
+    case 6:
       fill_horizontal(FRAZES[current_fraze], FRAZES[next_fraze]);
       break;
     case 4:
-      love(FRAZES[current_fraze], FRAZES[next_fraze]);
+    case 7:
+      doors(FRAZES[current_fraze], FRAZES[next_fraze]);
       break;
     case 0:
     case 5:
-    case 6:
       left_right_fill(FRAZES[current_fraze], FRAZES[next_fraze]);
       break;
     default:
@@ -163,12 +169,12 @@ void fill_horizontal(const byte old_fraze[8], const byte new_fraze[8]) {
   for (int i = 0; i < SIZE_OF_MATRIX; i++) {
     ledMatrix.setColumn(i, B11111111);
     ledMatrix.commit();
-    delay(100);
+    delay(DELAY);
   }
   for (int i = 0; i < SIZE_OF_MATRIX; i++) {
     ledMatrix.setColumn(i, new_fraze[i]);
     ledMatrix.commit();
-    delay(100);
+    delay(DELAY);
   }
 }
 
@@ -181,42 +187,22 @@ void fill_from_left_angle(const byte old_fraze[8], const byte new_fraze[8]) {
       ledMatrix.setColumn(j, old_fraze[j]);
     }
     ledMatrix.commit();
-    delay(100);
+    delay(DELAY);
   }
-  for (int i = SIZE_OF_MATRIX - 1; i >= 0; i--) {
-    for (int j = 0; j < i; j++) {
-      ledMatrix.setColumn(j, (B11111111 << (8 - i)) | new_fraze[j]);
+  for (int i = 0; i < SIZE_OF_MATRIX; i++) {
+    for (int j = 0; j <= i; j++) {
+      ledMatrix.setColumn(j, new_fraze[j]);
     }
-    for (int j = i; j < SIZE_OF_MATRIX; j++) {
-      ledMatrix.setColumn(j, B00000000 | new_fraze[j]);
+    for (int j = i + 1; j < SIZE_OF_MATRIX; j++) {
+      ledMatrix.setColumn(j, (B11111111 >> (i + 1)) | new_fraze[j]);
     }
+
     ledMatrix.commit();
-    delay(100);
+    delay(DELAY);
   }
 }
 
-void love(const byte old_fraze[8], const byte new_fraze[8]) {
-  for (int i = 0; i < SIZE_OF_MATRIX; i++) {
-    for (int j = 0; j <= i; j++) {
-      ledMatrix.setColumn(j, ((B11111111 << (7 - i)) | old_fraze[j]));
-    }
-    for (int j = i + 1; j < SIZE_OF_MATRIX; j++) {
-      ledMatrix.setColumn(j, old_fraze[j]);
-    }
-    ledMatrix.commit();
-    delay(100);
-  }
-  for (int i = SIZE_OF_MATRIX - 1; i >= 0; i--) {
-    for (int j = 0; j < i; j++) {
-      ledMatrix.setColumn(j, (B11111111 << (8 - i)) | new_fraze[j]);
-    }
-    for (int j = i; j < SIZE_OF_MATRIX; j++) {
-      ledMatrix.setColumn(j, B00000000 | new_fraze[j]);
-    }
-    ledMatrix.commit();
-    delay(100);
-  }
-}
+
 
 void fill_vertical(const byte old_fraze[8], const byte new_fraze[8]) {
   const byte ROW[9] = {
@@ -235,14 +221,34 @@ void fill_vertical(const byte old_fraze[8], const byte new_fraze[8]) {
       ledMatrix.setColumn(i, (ROW[8 - j] | old_fraze[i]));
     }
     ledMatrix.commit();
-    delay(100);
+    delay(DELAY);
   }
   for (int j = 0; j < 9; j++) {
     for (int i = 0; i < SIZE_OF_MATRIX; i++) {
       ledMatrix.setColumn(i,  (ROW[j] | new_fraze[i]));
     }
     ledMatrix.commit();
-    delay(100);
+    delay(DELAY);
   }
 }
 
+void doors(const byte old_fraze[8], const byte new_fraze[8]) {
+  for (int i = 0; i <= SIZE_OF_MATRIX / 2; i++) {
+    for (int j = 0; j < SIZE_OF_MATRIX; j++) {
+      int doors = B11110000 << (4 - i);
+      doors = doors |  (B00001111 >> (4 - i));
+      ledMatrix.setColumn(j, (doors | old_fraze[j]));
+    }
+    ledMatrix.commit();
+    delay(DELAY);
+  }
+  for (int i = 0; i <= SIZE_OF_MATRIX / 2; i++) {
+    for (int j = 0; j < SIZE_OF_MATRIX; j++) {
+      int doors = B11110000 << (i);
+      doors = doors |  (B00001111 >> (i));
+      ledMatrix.setColumn(j, (doors | new_fraze[j]));
+    }
+    ledMatrix.commit();
+    delay(DELAY);
+  }
+}
